@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f6f2" />
+    <title>Study Whiteboard</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      ;(() => {
+        const reportFatal = (message) => {
+          window.__TAURI_INTERNALS__?.invoke('frontend_log', { message: `bootstrap.error: ${message}` }).catch(() => {})
+          queueMicrotask(() => {
+            const root = document.getElementById('root')
+            if (root && !root.hasChildNodes()) {
+              const error = document.createElement('pre')
+              error.style.cssText = 'margin:32px;white-space:pre-wrap;font:16px/1.5 system-ui;color:#7f1d1d'
+              error.textContent = `Study Whiteboard could not start.\n\n${message}`
+              root.appendChild(error)
+            }
+          })
+        }
+
+        window.addEventListener('error', (event) => reportFatal(`${event.message}\n${event.error?.stack ?? ''}`))
+        window.addEventListener('unhandledrejection', (event) => reportFatal(String(event.reason)))
+      })()
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

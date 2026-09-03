@@ -1,0 +1,35 @@
+# Dependencies and package-manager caches
+node_modules/
+.pnpm-store/
+
+# Production and desktop builds
+dist/
+release/
+src-tauri/target/
+*.exe
+*.msi
+*.zip
+
+# Local desktop/browser profiles and test output
+desktop-test-data*/
+desktop-tests/
+edge-wrapper-test-data*/
+tauri-retained-test-data/
+.partial-test/
+*.log
+
+# Local environment variables and license keys
+.env
+.env.*
+!.env.example
+
+# TypeScript/Vite generated files
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
