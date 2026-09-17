@@ -15,6 +15,16 @@ import {
 } from './storage/boardStorage'
 import { deleteBoardSnapshot, duplicateBoardSnapshot } from './storage/boardPersistence'
 
+const PRESSURE_STORAGE_KEY = 'study-whiteboard:pressure-enabled:v1'
+
+function loadPressureEnabled() {
+  try {
+    return localStorage.getItem(PRESSURE_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
 export default function App() {
   const [boards, setBoards] = useState<Board[]>(() => loadBoards())
   const [activeBoardId, setActiveBoardId] = useState(() => getActiveBoardId(boards))
@@ -23,6 +33,16 @@ export default function App() {
   const [eraserMode, setEraserMode] = useState<EraserMode>('stroke')
   const [inkColor, setInkColor] = useState('black')
   const [inkScale, setInkScale] = useState(1)
+  const [pressureEnabled, setPressureEnabledState] = useState(loadPressureEnabled)
+
+  const setPressureEnabled = (enabled: boolean) => {
+    setPressureEnabledState(enabled)
+    try {
+      localStorage.setItem(PRESSURE_STORAGE_KEY, String(enabled))
+    } catch {
+      // Keep the current-session setting usable if storage is unavailable.
+    }
+  }
 
   const activeBoard = useMemo(
     () => boards.find((board) => board.id === activeBoardId) ?? boards[0],
@@ -73,12 +93,14 @@ export default function App() {
           eraserMode,
           inkColor,
           inkScale,
+          pressureEnabled,
           openBoardManager: () => setBoardManagerOpen(true),
           saveStatus,
           setBackground: (nextBackground) => setBoards((current) => updateBoardBackground(current, activeBoard.id, nextBackground)),
           setEraserMode,
           setInkColor,
           setInkScale,
+          setPressureEnabled,
           setSaveStatus,
         }}
       >
