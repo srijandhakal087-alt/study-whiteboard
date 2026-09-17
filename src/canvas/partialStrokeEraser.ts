@@ -98,22 +98,35 @@ function resample(points: StrokePoint[], spacing: number) {
   return sampled
 }
 
-function splitSegment(segment: TLDrawShapeSegment, scaleX: number, scaleY: number, center: StrokePoint, radius: number) {
+function getStrokeLength(points: StrokePoint[]) {
+  let length = 0
+  for (let index = 1; index < points.length; index += 1) {
+    length += Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y)
+  }
+  return length
+}
+
+function splitSegment(segment: TLDrawShapeSegment, scaleX: number, scaleY: number, center: StrokePoint, halfSize: number) {
   const dim = segment.dim === 2 ? 2 : 3
-  const points = resample(getPointsFromDrawSegment(segment, scaleX, scaleY), Math.max(2, radius / 3))
+  const points = resample(getPointsFromDrawSegment(segment, scaleX, scaleY), Math.max(2, halfSize / 3))
   const fragments: StrokeFragment[] = []
   let current: StrokePoint[] = []
   let erased = false
+  const keepFragment = () => {
+    if (current.length >= 2 && getStrokeLength(current) >= halfSize * 1.2) {
+      fragments.push({ type: segment.type, points: current, dim })
+    }
+    current = []
+  }
   for (const point of points) {
-    if (Math.hypot(point.x - center.x, point.y - center.y) <= radius) {
+    if (Math.abs(point.x - center.x) <= halfSize && Math.abs(point.y - center.y) <= halfSize) {
       erased = true
-      if (current.length >= 2) fragments.push({ type: segment.type, points: current, dim })
-      current = []
+      keepFragment()
     } else {
       current.push(point)
     }
   }
-  if (current.length >= 2) fragments.push({ type: segment.type, points: current, dim })
+  keepFragment()
   return { erased, fragments }
 }
 
@@ -124,17 +137,17 @@ function isPartialErasable(shape: TLShape): shape is TLShape & {
   return (shape.type === 'draw' || shape.type === 'highlight') && !shape.isLocked
 }
 
-export function erasePartialStrokeAtPoint(editor: Editor, pagePoint: StrokePoint, pageRadius: number) {
+export function erasePartialStrokeAtPoint(editor: Editor, pagePoint: StrokePoint, pageHalfSize: number) {
   const changes: Array<{ shape: TLShape; fragments: StrokeFragment[] }> = []
   for (const shape of editor.getCurrentPageShapes()) {
     if (!isPartialErasable(shape)) continue
     const bounds = editor.getShapePageBounds(shape)
-    if (!bounds || pagePoint.x < bounds.x - pageRadius || pagePoint.x > bounds.x + bounds.w + pageRadius || pagePoint.y < bounds.y - pageRadius || pagePoint.y > bounds.y + bounds.h + pageRadius) continue
+    if (!bounds || pagePoint.x < bounds.x - pageHalfSize || pagePoint.x > bounds.x + bounds.w + pageHalfSize || pagePoint.y < bounds.y - pageHalfSize || pagePoint.y > bounds.y + bounds.h + pageHalfSize) continue
     const localPoint = editor.getPointInShapeSpace(shape, pagePoint)
     const fragments: StrokeFragment[] = []
     let erased = false
     for (const segment of shape.props.segments) {
-      const result = splitSegment(segment, shape.props.scaleX, shape.props.scaleY, localPoint, pageRadius)
+      const result = splitSegment(segment, shape.props.scaleX, shape.props.scaleY, localPoint, pageHalfSize)
       erased ||= result.erased
       fragments.push(...result.fragments)
     }

@@ -11,6 +11,10 @@ export function RuledBackground() {
   const spacing = RULE_SPACING * camera.z
   const offsetX = ((camera.x * camera.z) % spacing + spacing) % spacing
   const offsetY = ((camera.y * camera.z) % spacing + spacing) % spacing
+  const notebookWidth = spacing * 9
+  const notebookHeight = spacing * 13
+  const notebookOffsetX = ((camera.x * camera.z) % notebookWidth + notebookWidth) % notebookWidth
+  const notebookOffsetY = ((camera.y * camera.z) % notebookHeight + notebookHeight) % notebookHeight
 
   return (
     <div
@@ -20,7 +24,13 @@ export function RuledBackground() {
         backgroundColor: background.color,
         '--grid-size': `${spacing}px`,
         '--grid-half': `${spacing / 2}px`,
-        backgroundPosition: `${offsetX}px ${offsetY}px`,
+        '--notebook-width': `${notebookWidth}px`,
+        '--notebook-height': `${notebookHeight}px`,
+        '--notebook-margin': `${spacing * 0.9}px`,
+        '--notebook-offset-x': `${notebookOffsetX}px`,
+        '--notebook-offset-y': `${notebookOffsetY}px`,
+        '--grid-offset-y': `${offsetY}px`,
+        backgroundPosition: background.pattern === 'notebook-page' ? undefined : `${offsetX}px ${offsetY}px`,
       } as CSSProperties}
       aria-hidden="true"
     />
