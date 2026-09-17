@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
-export type BackgroundPattern = 'solid' | 'dot' | 'square' | 'graph' | 'hybrid' | 'diamond' | 'wide-rule' | 'triangle' | 'narrow-rule'
+export type BackgroundPattern = 'solid' | 'dot' | 'square' | 'graph' | 'hybrid' | 'diamond' | 'wide-rule' | 'triangle' | 'narrow-rule' | 'notebook-page'
 export type EraserMode = 'partial' | 'stroke'
 
 export interface BoardBackground {
@@ -14,12 +14,14 @@ interface WhiteboardUiContextValue {
   eraserMode: EraserMode
   inkColor: string
   inkScale: number
+  pressureEnabled: boolean
   openBoardManager: () => void
   saveStatus: 'saving' | 'saved' | 'error'
   setBackground: (background: BoardBackground) => void
   setEraserMode: (mode: EraserMode) => void
   setInkColor: (color: string) => void
   setInkScale: (scale: number) => void
+  setPressureEnabled: (enabled: boolean) => void
   setSaveStatus: (status: 'saving' | 'saved' | 'error') => void
 }
 

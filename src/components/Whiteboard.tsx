@@ -53,7 +53,7 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
   const [editor, setEditor] = useState<Editor | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const stopSavingRef = useRef<(() => void) | null>(null)
-  const { eraserMode, inkColor, inkScale, setSaveStatus } = useWhiteboardUi()
+  const { eraserMode, inkColor, inkScale, pressureEnabled, setSaveStatus } = useWhiteboardUi()
 
   const handleMount = useCallback(
     (mountedEditor: Editor) => {
@@ -100,28 +100,85 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
     inkCursor.style.backgroundColor = inkCursorColors[inkColor] ?? inkCursorColors.black
     inkCursor.hidden = true
     container.appendChild(inkCursor)
+    const eraserCursor = document.createElement('div')
+    eraserCursor.className = 'eraser-cursor-square'
+    eraserCursor.hidden = true
+    container.appendChild(eraserCursor)
     let activePan: { pointerId: number; previousTool: string } | null = null
     let activeEraser: { pointerId: number; previousTool: string } | null = null
     let activePartialEraser: { pointerId: number } | null = null
+    let activeStrokeEraser: { pointerId: number } | null = null
     let lineAssist: { pointerId: number; points: Array<{ x: number; y: number }>; timer: number | null; active: boolean } | null = null
     let suppressNextContextMenu = false
+
+    const normalizePointerPressure = (event: PointerEvent) => {
+      if (pressureEnabled || event.pointerType !== 'pen') return
+      const setConstantPressure = (point: PointerEvent) => {
+        try {
+          // tldraw multiplies stylus pressure by 1.25; 0.4 becomes its neutral 0.5.
+          Object.defineProperty(point, 'pressure', { configurable: true, value: 0.4 })
+        } catch {
+          // Ignore platforms that do not allow an event property override.
+        }
+      }
+      setConstantPressure(event)
+      const getCoalescedEvents = event.getCoalescedEvents?.bind(event)
+      if (!getCoalescedEvents) return
+      try {
+        Object.defineProperty(event, 'getCoalescedEvents', {
+          configurable: true,
+          value: () => getCoalescedEvents().map((point) => {
+            setConstantPressure(point)
+            return point
+          }),
+        })
+      } catch {
+        // The main pointer event is still normalized when coalesced events are unavailable.
+      }
+    }
 
     const hideInkCursor = () => {
       inkCursor.hidden = true
       container.classList.remove('has-ink-cursor')
     }
 
+    const hideEraserCursor = () => {
+      eraserCursor.hidden = true
+      container.classList.remove('has-eraser-cursor')
+    }
+
     const updateInkCursor = (event: PointerEvent) => {
       const tool = editor.getCurrentToolId()
       const isUiTarget = Boolean((event.target as HTMLElement).closest('button, input, aside, .floating-toolbar, .ink-panel, .undo-pod, .zoom-pod, .board-title-pill, .canvas-ruler'))
+      const bounds = container.getBoundingClientRect()
+      if (tool === 'eraser' && event.pointerType !== 'touch' && !isUiTarget) {
+        hideInkCursor()
+        eraserCursor.hidden = false
+        eraserCursor.style.transform = `translate(${event.clientX - bounds.left}px, ${event.clientY - bounds.top}px)`
+        container.classList.add('has-eraser-cursor')
+        return
+      }
+      hideEraserCursor()
       if ((tool !== 'draw' && tool !== 'highlight') || event.pointerType === 'touch' || isUiTarget) {
         hideInkCursor()
         return
       }
-      const bounds = container.getBoundingClientRect()
       inkCursor.hidden = false
       inkCursor.style.transform = `translate(${event.clientX - bounds.left}px, ${event.clientY - bounds.top}px)`
       container.classList.add('has-ink-cursor')
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      if (event.pointerType === 'pen') {
+        const bounds = container.getBoundingClientRect()
+        const stillInsideCanvas = event.clientX >= bounds.left
+          && event.clientX <= bounds.right
+          && event.clientY >= bounds.top
+          && event.clientY <= bounds.bottom
+        if (stillInsideCanvas) return
+      }
+      hideInkCursor()
+      hideEraserCursor()
     }
 
     const stopFineScale = editor.store.listen(({ changes }) => {
@@ -132,26 +189,41 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
       }
     }, { source: 'user', scope: 'document' })
 
+    const eraseEntireStrokeAtPoint = (event: PointerEvent) => {
+      const pagePoint = editor.screenToPage({ x: event.clientX, y: event.clientY })
+      const margin = 20 / editor.getZoomLevel()
+      const ids = editor.getShapesAtPoint(pagePoint, { hitInside: true, margin })
+        .filter((shape) => (shape.type === 'draw' || shape.type === 'highlight') && !shape.isLocked)
+        .map((shape) => shape.id)
+      if (ids.length) editor.deleteShapes(ids)
+    }
+
+    const beginCustomErase = (event: PointerEvent) => {
+      editor.setErasingShapes([])
+      editor.markHistoryStoppingPoint(eraserMode === 'partial' ? 'partial erase' : 'stroke erase')
+      if (eraserMode === 'partial') {
+        activePartialEraser = { pointerId: event.pointerId }
+        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), 20 / editor.getZoomLevel())
+      } else {
+        activeStrokeEraser = { pointerId: event.pointerId }
+        eraseEntireStrokeAtPoint(event)
+      }
+      updateInkCursor(event)
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+
     const handlePointerDown = (event: PointerEvent) => {
+      normalizePointerPressure(event)
       const isUiTarget = Boolean((event.target as HTMLElement).closest('button, input, aside, .floating-toolbar, .ink-panel, .undo-pod, .zoom-pod, .board-title-pill, .canvas-ruler'))
       if (event.pointerType === 'pen' && event.button === 5 && !activeEraser) {
         activeEraser = { pointerId: event.pointerId, previousTool: editor.getCurrentToolId() }
         editor.setCurrentTool('eraser')
-        if (eraserMode === 'partial' && !isUiTarget) {
-          activePartialEraser = { pointerId: event.pointerId }
-          editor.markHistoryStoppingPoint('partial erase')
-          erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), 18 / editor.getZoomLevel())
-          event.preventDefault()
-          event.stopImmediatePropagation()
-        }
+        if (!isUiTarget) beginCustomErase(event)
         return
       }
-      if (event.button === 0 && eraserMode === 'partial' && editor.getCurrentToolId() === 'eraser' && !isUiTarget) {
-        activePartialEraser = { pointerId: event.pointerId }
-        editor.markHistoryStoppingPoint('partial erase')
-        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), 18 / editor.getZoomLevel())
-        event.preventDefault()
-        event.stopImmediatePropagation()
+      if (event.button === 0 && editor.getCurrentToolId() === 'eraser' && !isUiTarget) {
+        beginCustomErase(event)
         return
       }
       if (event.button === 0 && editor.getCurrentToolId() === 'draw') {
@@ -169,9 +241,16 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
     }
 
     const handlePointerMove = (event: PointerEvent) => {
+      normalizePointerPressure(event)
       updateInkCursor(event)
       if (activePartialEraser && event.pointerId === activePartialEraser.pointerId) {
-        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), 18 / editor.getZoomLevel())
+        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), 20 / editor.getZoomLevel())
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        return
+      }
+      if (activeStrokeEraser && event.pointerId === activeStrokeEraser.pointerId) {
+        eraseEntireStrokeAtPoint(event)
         event.preventDefault()
         event.stopImmediatePropagation()
         return
@@ -210,9 +289,14 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
     }
 
     const finishPartialErase = (event: PointerEvent) => {
-      if (!activePartialEraser || event.pointerId !== activePartialEraser.pointerId) return
+      normalizePointerPressure(event)
+      const isPartial = activePartialEraser?.pointerId === event.pointerId
+      const isStroke = activeStrokeEraser?.pointerId === event.pointerId
+      if (!isPartial && !isStroke) return
       activePartialEraser = null
-      editor.markHistoryStoppingPoint('partial erase complete')
+      activeStrokeEraser = null
+      editor.setErasingShapes([])
+      editor.markHistoryStoppingPoint(isPartial ? 'partial erase complete' : 'stroke erase complete')
       if (activeEraser && activeEraser.pointerId === event.pointerId) {
         const { previousTool } = activeEraser
         activeEraser = null
@@ -229,7 +313,9 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
       lineAssist = null
       activeEraser = null
       activePartialEraser = null
+      activeStrokeEraser = null
       activePan = null
+      editor.setErasingShapes([])
       if (previousTool) editor.setCurrentTool(previousTool)
     }
 
@@ -268,7 +354,8 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
 
     container.addEventListener('pointerdown', handlePointerDown, true)
     container.addEventListener('pointermove', handlePointerMove, true)
-    container.addEventListener('pointerleave', hideInkCursor)
+    container.addEventListener('pointerleave', handlePointerLeave)
+    container.addEventListener('pointercancel', handlePointerLeave)
     container.addEventListener('pointerup', finishPartialErase, true)
     container.addEventListener('pointercancel', finishPartialErase, true)
     container.addEventListener('contextmenu', preventPanContextMenu)
@@ -281,7 +368,8 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
     return () => {
       container.removeEventListener('pointerdown', handlePointerDown, true)
       container.removeEventListener('pointermove', handlePointerMove, true)
-      container.removeEventListener('pointerleave', hideInkCursor)
+      container.removeEventListener('pointerleave', handlePointerLeave)
+      container.removeEventListener('pointercancel', handlePointerLeave)
       container.removeEventListener('pointerup', finishPartialErase, true)
       container.removeEventListener('pointercancel', finishPartialErase, true)
       container.removeEventListener('contextmenu', preventPanContextMenu)
@@ -293,9 +381,11 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
       container.removeEventListener('drop', handleDrop, true)
       stopFineScale()
       inkCursor.remove()
+      eraserCursor.remove()
       container.classList.remove('has-ink-cursor')
+      container.classList.remove('has-eraser-cursor')
     }
-  }, [editor, eraserMode, inkColor, inkScale])
+  }, [editor, eraserMode, inkColor, inkScale, pressureEnabled])
 
   return (
     <section className="whiteboard" aria-label="Study whiteboard">
@@ -305,6 +395,7 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
         autoFocus
         hideUi
         initialState="select"
+        licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
         onMount={handleMount}
         components={whiteboardComponents}
       />
