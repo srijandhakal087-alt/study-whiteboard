@@ -587,6 +587,20 @@ export function FloatingToolbar() {
 
   const selectBackgroundPattern = (pattern: typeof backgroundPatterns[number][0]) => {
     setBackground({ ...background, pattern })
+    if (pattern === 'notebook-page') {
+      didCenterNotebookPage.current = true
+      window.requestAnimationFrame(() => {
+        const viewport = editor.getViewportScreenBounds()
+        editor.setCamera(
+          {
+            x: (viewport.w - NOTEBOOK_PAGE_WIDTH) / 2,
+            y: 68,
+            z: 1,
+          },
+          { animation: { duration: 220 } },
+        )
+      })
+    }
   }
 
   return (
