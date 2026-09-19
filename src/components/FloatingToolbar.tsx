@@ -43,6 +43,7 @@ import {
   type TLDefaultColorStyle,
   type TLDefaultSizeStyle,
 } from 'tldraw'
+import { NOTEBOOK_PAGE_WIDTH } from '../canvas/RuledBackground'
 import { exportBoard } from '../export/exportBoard'
 import { exportAnnotatedPdf, getPdfPageIds, importPdf } from '../pdf/pdfTools'
 import { useWhiteboardUi } from './WhiteboardUiContext'
@@ -141,6 +142,7 @@ export function FloatingToolbar() {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
   const didInitializePenThickness = useRef(false)
+  const didCenterNotebookPage = useRef(false)
   const { background, boardName, eraserMode, inkScale, openBoardManager, pressureEnabled, saveStatus, setBackground, setEraserMode, setInkColor, setInkScale, setPressureEnabled } = useWhiteboardUi()
   const activeTool = useValue('active tool', () => editor.getCurrentToolId(), [editor])
   const canUndo = useValue('can undo', () => editor.getCanUndo(), [editor])
@@ -168,6 +170,7 @@ export function FloatingToolbar() {
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [isBackgroundOpen, setBackgroundOpen] = useState(false)
   const [isRulerVisible, setRulerVisible] = useState(false)
+
   const [isFocusMode, setFocusMode] = useState(false)
   const [isTimerOpen, setTimerOpen] = useState(false)
   const [isTimerRunning, setTimerRunning] = useState(false)
@@ -180,6 +183,25 @@ export function FloatingToolbar() {
     x: typeof window === 'undefined' ? 500 : window.innerWidth / 2,
     y: typeof window === 'undefined' ? 350 : window.innerHeight * 0.47,
   }))
+
+  useEffect(() => {
+    if (background.pattern !== 'notebook-page') {
+      didCenterNotebookPage.current = false
+      return
+    }
+    if (didCenterNotebookPage.current) return
+
+    didCenterNotebookPage.current = true
+    const viewport = editor.getViewportScreenBounds()
+    editor.setCamera(
+      {
+        x: (viewport.w - NOTEBOOK_PAGE_WIDTH) / 2,
+        y: 68,
+        z: 1,
+      },
+      { animation: { duration: 220 } },
+    )
+  }, [background.pattern, editor])
 
   useEffect(() => {
     if (!isTimerRunning) return
@@ -563,6 +585,10 @@ export function FloatingToolbar() {
     })
   }
 
+  const selectBackgroundPattern = (pattern: typeof backgroundPatterns[number][0]) => {
+    setBackground({ ...background, pattern })
+  }
+
   return (
     <>
       <input ref={imageInputRef} className="visually-hidden" type="file" accept="image/*" multiple onChange={addImages} />
@@ -664,7 +690,7 @@ export function FloatingToolbar() {
                 key={pattern}
                 type="button"
                 data-active={background.pattern === pattern}
-                onClick={() => setBackground({ ...background, pattern })}
+                onClick={() => selectBackgroundPattern(pattern)}
               >
                 <span className="pattern-preview" data-pattern={pattern} style={{ backgroundColor: background.color }} />
                 <strong>{label}</strong>
