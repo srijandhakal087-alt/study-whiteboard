@@ -24,6 +24,8 @@ const inkCursorColors: Record<string, string> = {
   'light-green': '#9bd7a5',
 }
 
+const PARTIAL_ERASER_HALF_SIZE = 12
+
 const localAssetUrls: TLUiAssetUrlOverrides = {
   fonts: {
     tldraw_mono: localAsset('fonts/IBMPlexMono-Medium.woff2'),
@@ -102,6 +104,7 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
     container.appendChild(inkCursor)
     const eraserCursor = document.createElement('div')
     eraserCursor.className = 'eraser-cursor-square'
+    eraserCursor.dataset.mode = eraserMode
     eraserCursor.hidden = true
     container.appendChild(eraserCursor)
     let activePan: { pointerId: number; previousTool: string } | null = null
@@ -203,7 +206,7 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
       editor.markHistoryStoppingPoint(eraserMode === 'partial' ? 'partial erase' : 'stroke erase')
       if (eraserMode === 'partial') {
         activePartialEraser = { pointerId: event.pointerId }
-        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), 20 / editor.getZoomLevel())
+        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), PARTIAL_ERASER_HALF_SIZE / editor.getZoomLevel())
       } else {
         activeStrokeEraser = { pointerId: event.pointerId }
         eraseEntireStrokeAtPoint(event)
@@ -244,7 +247,7 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
       normalizePointerPressure(event)
       updateInkCursor(event)
       if (activePartialEraser && event.pointerId === activePartialEraser.pointerId) {
-        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), 20 / editor.getZoomLevel())
+        erasePartialStrokeAtPoint(editor, editor.screenToPage({ x: event.clientX, y: event.clientY }), PARTIAL_ERASER_HALF_SIZE / editor.getZoomLevel())
         event.preventDefault()
         event.stopImmediatePropagation()
         return
