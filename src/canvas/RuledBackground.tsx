@@ -3,12 +3,13 @@ import type { CSSProperties } from 'react'
 import { useWhiteboardUi } from '../components/WhiteboardUiContext'
 
 const RULE_SPACING = 80
+const NOTEBOOK_SPACING = 108
 
 export function RuledBackground() {
   const editor = useEditor()
   const { background } = useWhiteboardUi()
   const camera = useValue('ruled paper camera', () => editor.getCamera(), [editor])
-  const spacing = RULE_SPACING * camera.z
+  const spacing = (background.pattern === 'notebook-page' ? NOTEBOOK_SPACING : RULE_SPACING) * camera.z
   const offsetX = ((camera.x * camera.z) % spacing + spacing) % spacing
   const offsetY = ((camera.y * camera.z) % spacing + spacing) % spacing
   const notebookWidth = spacing * 9
