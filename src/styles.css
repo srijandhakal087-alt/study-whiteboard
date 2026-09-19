@@ -1208,6 +1208,13 @@ button {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.82);
 }
 
+.eraser-cursor-square[data-mode="partial"] {
+  top: -12px;
+  left: -12px;
+  width: 24px;
+  height: 24px;
+}
+
 .tl-container.has-eraser-cursor,
 .tl-container.has-eraser-cursor .tl-canvas,
 .tl-container.has-eraser-cursor .tl-canvas * { cursor: none !important; }
