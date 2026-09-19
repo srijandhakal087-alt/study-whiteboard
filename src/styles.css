@@ -56,18 +56,21 @@ button {
 .ruled-background[data-pattern="diamond"], .pattern-preview[data-pattern="diamond"] { background-image: linear-gradient(45deg, transparent 49%, rgba(70,80,90,.2) 49% 51%, transparent 51%), linear-gradient(-45deg, transparent 49%, rgba(70,80,90,.2) 49% 51%, transparent 51%); background-size: var(--grid-size) var(--grid-size); }
 .ruled-background[data-pattern="triangle"], .pattern-preview[data-pattern="triangle"] { background-image: linear-gradient(60deg, transparent 49%, rgba(70,80,90,.2) 49% 51%, transparent 51%), linear-gradient(-60deg, transparent 49%, rgba(70,80,90,.2) 49% 51%, transparent 51%), linear-gradient(0deg, transparent 49%, rgba(70,80,90,.2) 49% 51%, transparent 51%); background-size: var(--grid-size) var(--grid-half); }
 .ruled-background[data-pattern="notebook-page"] {
-  position: relative;
-  overflow: hidden;
-  background-image: none;
-}
-
-.notebook-sheet {
-  position: absolute;
   background-image:
     linear-gradient(to right, transparent 0 var(--notebook-margin), rgba(218, 91, 101, .42) var(--notebook-margin) calc(var(--notebook-margin) + 2px), transparent calc(var(--notebook-margin) + 2px)),
-    repeating-linear-gradient(to bottom, transparent 0 calc(var(--notebook-line-spacing) - 1px), rgba(92, 137, 178, .25) calc(var(--notebook-line-spacing) - 1px) var(--notebook-line-spacing));
-  border: 1px solid rgba(85, 94, 103, .18);
-  box-shadow: 0 8px 28px rgba(35, 42, 50, .16);
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--grid-half) - 1px), rgba(92, 137, 178, .25) calc(var(--grid-half) - 1px) var(--grid-half)),
+    linear-gradient(to right, transparent 0 calc(100% - 1px), rgba(85, 94, 103, .16) calc(100% - 1px)),
+    linear-gradient(to bottom, transparent 0 calc(100% - 1px), rgba(85, 94, 103, .14) calc(100% - 1px));
+  background-size:
+    var(--notebook-width) var(--notebook-height),
+    var(--notebook-width) var(--grid-half),
+    var(--notebook-width) var(--notebook-height),
+    var(--notebook-width) var(--notebook-height);
+  background-position:
+    var(--notebook-offset-x) var(--notebook-offset-y),
+    var(--notebook-offset-x) var(--grid-offset-y),
+    var(--notebook-offset-x) var(--notebook-offset-y),
+    var(--notebook-offset-x) var(--notebook-offset-y);
 }
 
 .pattern-preview[data-pattern="notebook-page"] {
