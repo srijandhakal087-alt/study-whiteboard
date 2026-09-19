@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Tldraw, iconTypes, inlineBase64AssetStore, type Editor, type TLUiAssetUrlOverrides } from 'tldraw'
 import 'tldraw/tldraw.css'
 import { erasePartialStrokeAtPoint } from '../canvas/partialStrokeEraser'
-import { NOTEBOOK_PAGE_WIDTH } from '../canvas/RuledBackground'
 import { whiteboardComponents } from '../canvas/whiteboardConfig'
 import { reportDiagnostic } from '../diagnostics'
 import { loadBoardSnapshot, saveBoardSnapshot } from '../storage/boardPersistence'
@@ -54,7 +53,7 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
   const [editor, setEditor] = useState<Editor | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const stopSavingRef = useRef<(() => void) | null>(null)
-  const { background, eraserMode, inkColor, inkScale, pressureEnabled, setSaveStatus } = useWhiteboardUi()
+  const { eraserMode, inkColor, inkScale, pressureEnabled, setSaveStatus } = useWhiteboardUi()
 
   const handleMount = useCallback(
     (mountedEditor: Editor) => {
@@ -65,15 +64,6 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
           if (snapshot) mountedEditor.loadSnapshot(snapshot)
         } catch (error) {
           reportDiagnostic(`[WHITEBOARD] restore failed: ${String(error)}`)
-        }
-
-        if (background.pattern === 'notebook-page') {
-          const viewport = mountedEditor.getViewportScreenBounds()
-          mountedEditor.setCamera({
-            x: (viewport.w - NOTEBOOK_PAGE_WIDTH) / 2,
-            y: 68,
-            z: 1,
-          })
         }
 
         stopSavingRef.current?.()
@@ -93,7 +83,7 @@ export function Whiteboard({ boardId }: WhiteboardProps) {
         reportDiagnostic(`[WHITEBOARD] editor mounted and board ${boardId} restored`)
       })()
     },
-    [background.pattern, boardId, setSaveStatus],
+    [boardId, setSaveStatus],
   )
 
   useEffect(() => () => {
