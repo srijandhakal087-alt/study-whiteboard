@@ -195,6 +195,20 @@ export function FloatingToolbar() {
     return () => window.clearInterval(interval)
   }, [isTimerRunning])
 
+  useEffect(() => {
+    if (!isBackgroundOpen) return
+    const ownerDocument = editor.getContainer().ownerDocument
+    const closeBackgroundPanelOnCanvasPress = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.closest('.tl-canvas')) {
+        setBackgroundOpen(false)
+      }
+    }
+
+    ownerDocument.addEventListener('pointerdown', closeBackgroundPanelOnCanvasPress, true)
+    return () => ownerDocument.removeEventListener('pointerdown', closeBackgroundPanelOnCanvasPress, true)
+  }, [editor, isBackgroundOpen])
+
   const adjustTimer = (minutes: number) => {
     const delta = minutes * 60
     setTimerBaseSeconds((current) => Math.max(60, Math.min(60 * 60, current + delta)))
