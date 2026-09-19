@@ -3,10 +3,6 @@ import type { CSSProperties } from 'react'
 import { useWhiteboardUi } from '../components/WhiteboardUiContext'
 
 const RULE_SPACING = 80
-export const NOTEBOOK_PAGE_WIDTH = 972
-export const NOTEBOOK_PAGE_HEIGHT = 1404
-const NOTEBOOK_LINE_SPACING = 54
-const NOTEBOOK_MARGIN = 97
 
 export function RuledBackground() {
   const editor = useEditor()
@@ -15,36 +11,28 @@ export function RuledBackground() {
   const spacing = RULE_SPACING * camera.z
   const offsetX = ((camera.x * camera.z) % spacing + spacing) % spacing
   const offsetY = ((camera.y * camera.z) % spacing + spacing) % spacing
-  const notebookOrigin = editor.pageToViewport({ x: 0, y: 0 })
-  const isNotebookPage = background.pattern === 'notebook-page'
+  const notebookWidth = spacing * 9
+  const notebookHeight = spacing * 13
+  const notebookOffsetX = ((camera.x * camera.z) % notebookWidth + notebookWidth) % notebookWidth
+  const notebookOffsetY = ((camera.y * camera.z) % notebookHeight + notebookHeight) % notebookHeight
 
   return (
     <div
       className="ruled-background"
       data-pattern={background.pattern}
       style={{
-        backgroundColor: isNotebookPage ? '#eef0f2' : background.color,
+        backgroundColor: background.color,
         '--grid-size': `${spacing}px`,
         '--grid-half': `${spacing / 2}px`,
+        '--notebook-width': `${notebookWidth}px`,
+        '--notebook-height': `${notebookHeight}px`,
+        '--notebook-margin': `${spacing * 0.9}px`,
+        '--notebook-offset-x': `${notebookOffsetX}px`,
+        '--notebook-offset-y': `${notebookOffsetY}px`,
         '--grid-offset-y': `${offsetY}px`,
-        backgroundPosition: isNotebookPage ? undefined : `${offsetX}px ${offsetY}px`,
+        backgroundPosition: background.pattern === 'notebook-page' ? undefined : `${offsetX}px ${offsetY}px`,
       } as CSSProperties}
       aria-hidden="true"
-    >
-      {isNotebookPage && (
-        <div
-          className="notebook-sheet"
-          style={{
-            left: `${notebookOrigin.x}px`,
-            top: `${notebookOrigin.y}px`,
-            width: `${NOTEBOOK_PAGE_WIDTH * camera.z}px`,
-            height: `${NOTEBOOK_PAGE_HEIGHT * camera.z}px`,
-            backgroundColor: background.color,
-            '--notebook-line-spacing': `${NOTEBOOK_LINE_SPACING * camera.z}px`,
-            '--notebook-margin': `${NOTEBOOK_MARGIN * camera.z}px`,
-          } as CSSProperties}
-        />
-      )}
-    </div>
+    />
   )
 }
