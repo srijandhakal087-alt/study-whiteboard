@@ -196,18 +196,19 @@ export function FloatingToolbar() {
   }, [isTimerRunning])
 
   useEffect(() => {
-    if (!isBackgroundOpen) return
+    if (!isBackgroundOpen && !isPenSettingsOpen) return
     const ownerDocument = editor.getContainer().ownerDocument
-    const closeBackgroundPanelOnCanvasPress = (event: PointerEvent) => {
+    const closePanelsOnCanvasPress = (event: PointerEvent) => {
       const target = event.target
       if (target instanceof Element && target.closest('.tl-canvas')) {
         setBackgroundOpen(false)
+        setPenSettingsOpen(false)
       }
     }
 
-    ownerDocument.addEventListener('pointerdown', closeBackgroundPanelOnCanvasPress, true)
-    return () => ownerDocument.removeEventListener('pointerdown', closeBackgroundPanelOnCanvasPress, true)
-  }, [editor, isBackgroundOpen])
+    ownerDocument.addEventListener('pointerdown', closePanelsOnCanvasPress, true)
+    return () => ownerDocument.removeEventListener('pointerdown', closePanelsOnCanvasPress, true)
+  }, [editor, isBackgroundOpen, isPenSettingsOpen])
 
   const adjustTimer = (minutes: number) => {
     const delta = minutes * 60
