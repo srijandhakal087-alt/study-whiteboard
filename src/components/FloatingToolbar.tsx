@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type
 import {
   ArrowUpRight,
   BookOpen,
+  Camera,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -166,6 +167,7 @@ export function FloatingToolbar() {
   const [isReactionsOpen, setReactionsOpen] = useState(false)
   const [isMoreOpen, setMoreOpen] = useState(false)
   const [isSettingsOpen, setSettingsOpen] = useState(false)
+  const [isScreenshotMode, setScreenshotMode] = useState(false)
   const [isBackgroundOpen, setBackgroundOpen] = useState(false)
   const [isRulerVisible, setRulerVisible] = useState(false)
   const [isFocusMode, setFocusMode] = useState(false)
@@ -578,6 +580,28 @@ export function FloatingToolbar() {
     })
   }
 
+  const enterScreenshotMode = () => {
+    editor.selectNone()
+    setScreenshotMode(true)
+    setSettingsOpen(false)
+    setTimerOpen(false)
+    setBackgroundOpen(false)
+    setInkPanelOpen(false)
+    setPenSettingsOpen(false)
+    setEraserPanelOpen(false)
+    setShapesOpen(false)
+    setReactionsOpen(false)
+    setMoreOpen(false)
+  }
+
+  if (isScreenshotMode) {
+    return (
+      <button className="screenshot-mode-done" type="button" onClick={() => setScreenshotMode(false)}>
+        Done
+      </button>
+    )
+  }
+
   return (
     <>
       <input ref={imageInputRef} className="visually-hidden" type="file" accept="image/*" multiple onChange={addImages} />
@@ -621,6 +645,7 @@ export function FloatingToolbar() {
             <div className="mini-popover settings-popover" role="menu" aria-label="Settings menu">
               <button type="button" onClick={() => { setBackgroundOpen(true); setSettingsOpen(false) }}><PaintBucket size={18} /> Format background</button>
               <button type="button" onClick={() => { void exportBoard(editor, boardName, 'pdf'); setSettingsOpen(false) }}><FileText size={18} /> Export as PDF</button>
+              <button type="button" onClick={enterScreenshotMode}><Camera size={18} /> Screenshot mode</button>
               <button className="settings-pressure-toggle" type="button" role="menuitemcheckbox" aria-checked={pressureEnabled} onClick={() => setPressureEnabled(!pressureEnabled)}>
                 <Gauge size={18} />
                 <span className="settings-pressure-label">Pen pressure</span>
